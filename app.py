@@ -12,7 +12,7 @@ def create_app():
         raise RuntimeError("You must set an api key with FLASK_API_KEY")
 
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////tmp/temps.sqlite"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/temps.sqlite"
     db = SQLAlchemy(app)
 
 
@@ -52,7 +52,8 @@ def create_app():
 
     @app.route("/temp", methods=["GET"])
     def show_temp():
-        return json.dumps([row.as_dict() for row in Temperature.query.all()], default=str)
+        result = Temperature.query.order_by(Temperature.id.desc()).first()
+        return json.dumps(result.as_dict(), default=str, indent=2)
 
 
     return app
