@@ -1,0 +1,9 @@
+version: "3"
+services:
+  site:
+    container_name: "stugstatus"
+    build: .
+    ports:
+      - "8036:5000"
+    environment:
+      FLASK_API_KEY: "YOUR_KEY"

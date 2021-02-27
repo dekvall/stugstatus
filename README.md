@@ -1,0 +1,3 @@
+# Stugstatus
+
+Monitor things.
