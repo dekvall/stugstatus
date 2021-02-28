@@ -1,26 +1,31 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, render_template
 from functools import wraps
 import os
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
-API_KEY = os.getenv("FLASK_API_KEY")
-if API_KEY is None:
-    raise RuntimeError("You must set an api key with FLASK_API_KEY")
+app = Flask(__name__, static_folder="static", template_folder="template")
 
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/temps.sqlite"
+debug_mode = app.config["ENV"] == "development"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///temps.sqlite" if debug_mode else "sqlite:////data/temps.sqlite"
+
+API_KEY = "test" if debug_mode else os.getenv("FLASK_API_KEY")
+if API_KEY is None:
+    raise RuntimeError("You must provide an api key with FLASK_API_KEY")
+
+
 db = SQLAlchemy(app)
 
 class Temperature(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.TIMESTAMP, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.TIMESTAMP, default=datetime.now, nullable=False)
     temp = db.Column(db.Integer, nullable=False)
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns if not c.name == 'id'}
 
+db.create_all()
 
 def require_apikey(view_function):
     @wraps(view_function)
@@ -47,7 +52,8 @@ def submit_temp():
 
 @app.route("/temp", methods=["GET"])
 def show_temp():
-    result = Temperature.query.order_by(Temperature.id.desc()).first()
-    return json.dumps(result.as_dict(), default=str, indent=2)
-
-db.create_all()
+    latest_temp = Temperature.query.order_by(Temperature.id.desc()).first()
+    if latest_temp is None:
+        abort(503)
+    week_data = Temperature.query.filter(Temperature.timestamp > datetime.now() - timedelta(days=7)).all()
+    return render_template('temperature_chart.html', latest_temp=latest_temp, history=week_data)
