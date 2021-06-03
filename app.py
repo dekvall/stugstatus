@@ -25,8 +25,13 @@ class Temperature(db.Model):
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns if not c.name == 'id'}
 
-class LivingRoomTemperature(Temperature):
-    pass
+class LivingRoomTemperature(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.TIMESTAMP, default=datetime.now, nullable=False)
+    temp = db.Column(db.Integer, nullable=False)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns if not c.name == 'id'}
 
 db.create_all()
 
