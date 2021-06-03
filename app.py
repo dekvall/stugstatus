@@ -25,6 +25,9 @@ class Temperature(db.Model):
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns if not c.name == 'id'}
 
+class LivingRoomTemperature(Temperature):
+    pass
+
 db.create_all()
 
 def require_apikey(view_function):
@@ -56,4 +59,25 @@ def show_temp():
     if latest_temp is None:
         abort(503)
     week_data = Temperature.query.filter(Temperature.timestamp > datetime.now() - timedelta(days=7)).all()
+    return render_template('temperature_chart.html', latest_temp=latest_temp, history=week_data)
+
+@app.route('/templr', methods=["POST"])
+@require_apikey
+def submit_living_room_temp():
+    content = request.get_json()
+    if content is not None:
+        if content.get('temperature') is not None:
+            last_temp = content.get('temperature')
+            db.session.add(LivingRoomTemperature(temp=last_temp))
+            db.session.commit()
+            return f"Successfully submitted {last_temp}"
+        else:
+            abort(400)
+
+@app.route("/templr", methods=["GET"])
+def show_living_room_temp():
+    latest_temp = LivingRoomTemperature.query.order_by(LivingRoomTemperature.id.desc()).first()
+    if latest_temp is None:
+        abort(503)
+    week_data = LivingRoomTemperature.query.filter(LivingRoomTemperature.timestamp > datetime.now() - timedelta(days=7)).all()
     return render_template('temperature_chart.html', latest_temp=latest_temp, history=week_data)
